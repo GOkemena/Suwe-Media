@@ -11,6 +11,7 @@ Chain:
  3. Voice polish: highpass 90, -2.5dB @300Hz, +2dB @2.5k, de-esser, compressor 3:1, very light echo (0.06), loudnorm -15 LUFS.
  4. Beat: volume 0.40, -4dB @2.2k (room for voice), -2dB @300Hz; ducks under voice (sidechain 2.5:1), fade out last 1.6s.
  5. Every exported video MUST have audible audio. Never post a silent video.
+    (The voice is padded before the sidechain so the beat keeps playing under the end card.)
 """
 import sys, subprocess, numpy as np, soundfile as sf, pyworld as pw
 from scipy.ndimage import median_filter, gaussian_filter1d
@@ -40,7 +41,7 @@ dur = float(subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=d
                            capture_output=True, text=True).stdout)
 ff("-i", "_vx.wav", "-i", beat, "-filter_complex",
    "[1:a]volume=0.40,equalizer=f=2200:t=o:w=1.5:g=-4,equalizer=f=300:t=o:w=1:g=-2[m];"
-   "[m][0:a]sidechaincompress=threshold=0.06:ratio=2.5:attack=20:release=350[md];[0:a]apad=pad_dur=5[vv];"
+   "[0:a]apad=pad_dur=8,asplit=2[vv][sc];[m][sc]sidechaincompress=threshold=0.06:ratio=2.5:attack=20:release=350[md];"
    f"[vv][md]amix=inputs=2:duration=longest:normalize=0,atrim=0:{dur},afade=t=out:st={dur-1.6}:d=1.6,alimiter=limit=0.95", "_mix.wav")
 ff("-i", video, "-i", "_mix.wav", "-map", "0:v", "-map", "1:a", "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
    "-shortest", "-movflags", "+faststart", out)
